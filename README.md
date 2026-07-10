@@ -33,7 +33,9 @@ AIFFEL_QUEST_ENG
 ├── 04_NLP
 │   ├── NLP01
 │   │   └── README.md
-│   └── NLP02
+│   ├── NLP02
+│   │   └── README.md
+│   └── NLP03
 │       └── README.md
 ├── 05_LLM
 │   ├── LLM01
