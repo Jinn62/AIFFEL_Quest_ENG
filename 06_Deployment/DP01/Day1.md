@@ -2,15 +2,27 @@
 
 코드, 모델, 데이터, 프런트엔드, 테스트, 노트북을 역할별 폴더로 구성했다. 가상환경과 캐시, 대형 모델 파일은 `.gitignore`로 관리한다.
 
-==================================================
-📁 models/ 폴더 내용
-==================================================
-  mnist_model.onnx                 1649.1 KB
-  mnist_state_dict.pth             1650.5 KB
-  mnist_traced.pt                  1674.5 KB
-  model.onnx                       1649.1 KB
-  model_state_dict.pth             1650.5 KB
-  model_traced.pt                  1674.3 KB
+```
+model-serving-course/   
+├── .gitignore (270 B)    
+├── 📁 app/   
+│   └── model_utils.py (2.6 KB)   
+├── 📁 data/    
+│   └── 📁 MNIST/   
+├── 📁 frontend/    
+├── 📁 models/    
+│   ├── mnist_model.onnx (1649.1 KB)    
+│   ├── mnist_state_dict.pth (1650.5 KB)    
+│   ├── mnist_traced.pt (1674.5 KB)   
+│   ├── model.onnx (1649.1 KB)    
+│   ├── model_state_dict.pth (1650.5 KB)    
+│   └── model_traced.pt (1674.3 KB)   
+├── 📁 notebooks/   
+├── requirements.txt (298 B)    
+├── requirements_freeze.txt (11.1 KB)   
+├── 📁 tests/   
+└── 모델배포개론01.ipynb (14962.9 KB)   
+```
 
 # 체크포인트 답변
 
