@@ -52,7 +52,6 @@
       - **핵심 배운 점**: 단순히 모델 가중치(`model.pth`)만 저장해서는 배포 환경을 온전히 재현할 수 없으며, 학습 시점의 전처리 파라미터(`mean`, `std`, `feature_names`)를 함께 보존해야 학습-서빙 불일치(Train-Serve Skew)와 데이터 누수(Data Leakage)를 원천 차단할 수 있다는 점을 핵심 원리로 정리했습니다.
       - **지표 관점의 고찰**: 단일 샘플의 예측값과 실제값의 단순 차이에 매몰되지 않고, 전체 테스트셋의 MAE($38,726)와 같은 객관적 메트릭으로 서빙 모델의 신뢰도를 평가해야 함을 명확히 짚었습니다.
       - **향후 개선 방향**: 은닉층 크기, 학습 epoch, 학습률 튜닝 등을 통한 MAE 개선 방향을 제시했습니다.
-      - **보완 제안**: 루브릭에서 권장하는 전체 시스템 아키텍처 실행 플로우 다이어그램이 텍스트로만 설명되어 있어, 아래 개선 제안 란에 Mermaid 시퀀스 다이어그램 코드를 제안했습니다.
         
 - [x]  **5. 코드가 간결하고 효율적인가요?**
     - **모듈화 및 역할 분리가 매우 깔끔합니다.**
@@ -64,87 +63,22 @@
 
 
 # 회고(참고 링크 및 코드 개선)
-
 ```
 [리뷰어 회고]
-이번 정성진 님의 Day 5 프로젝트는 모델 학습부터 FastAPI 비동기 API 서빙, Streamlit 프론트엔드 연결, 
-그리고 4가지 통합 테스트까지 완벽한 풀스택 MLOps 파이프라인을 교과서적으로 구현한 훌륭한 과제물이었습니다.
-
-특히 인상 깊었던 부분은 다음과 같습니다:
-1. '소득 변화에 따른 새니티 체크(Sanity Check)'를 통해 모델의 예측 방향성이 도메인 상식과 일치하는지
-   검증한 점 (MedInc 8.0 -> $354k vs 1.0 -> $102k).
-2. 'run_in_executor'의 필요성을 CPU-bound 연산과 이벤트 루프 블로킹 관점에서 명확히 이해하고 
-   체크포인트와 코드에 녹여낸 점.
-3. FastAPI 미실행 시 프론트엔드 예외 처리 화면까지 꼼꼼하게 캡처하여 문서화한 점.
-
-추가적인 완성도를 위해 Pydantic V2의 교차 필드 검증 로직과 전체 시스템 아키텍처 다이어그램을
-아래 개선 코드로 제안드립니다.
-
+- 모델 학습부터 FastAPI 비동기 서빙, Streamlit UI, 4종 통합 테스트까지 전체 서빙 파이프라인을 완성도 높게 구현하셨습니다.
+- 특히 소득 변화(8.0 vs 1.0)에 따른 예측 가격의 합리성을 검증한 새니티 체크(Sanity Check)와 `run_in_executor`를 활용한 이벤트 루프 논블로킹 처리가 매우 인상적이었습니다.
+- 전처리 파라미터(mean, std, 피처 순서)를 분리 저장하여 Train-Serve Skew를 원천 방지한 점도 훌륭합니다.
 
 [참고 링크]
-1. FastAPI 비동기 및 Concurrency 가이드:
-   https://fastapi.tiangolo.com/async/
-2. Pydantic V2 Model Validators (교차 필드 검증):
-   https://docs.pydantic.dev/latest/concepts/validators/#model-validators
-3. Google MLOps: 학습-서빙 불일치(Train-Serve Skew) 방지 패턴:
-   https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning
+- FastAPI Concurrency: https://fastapi.tiangolo.com/async/
+- Pydantic V2 Validators: https://docs.pydantic.dev/latest/concepts/validators/
 
+[코드 개선 팁: Pydantic V2 교차 필드 검증]
+- 방 수보다 침실 수가 많은 비정상 입력을 방지하기 위해 스키마에 아래 검증 로직을 추가하면 좋습니다.
 
-[개선 제안 코드 1] Pydantic V2 교차 필드 유효성 검증 (Cross-Field Validation)
-현재 스키마는 각 필드의 ge/le 단일 범위만 검사하므로, 사용자가 "방 수 = 2개, 침실 수 = 10개"와 같이
-물리적으로 모순된 데이터를 입력해도 200 OK로 통과될 수 있습니다. 
-아래와 같이 `@model_validator`를 추가하면 비즈니스 로직 오류를 API 진입점에서 사전에 차단할 수 있습니다.
-
-    from pydantic import BaseModel, Field, model_validator
-
-    class HousingRequest(BaseModel):
-        MedInc: float = Field(..., ge=0.0, le=20.0, description="중위 소득")
-        HouseAge: float = Field(..., ge=1.0, le=100.0, description="주택 연식")
-        AveRooms: float = Field(..., ge=1.0, le=50.0, description="평균 방 수")
-        AveBedrms: float = Field(..., ge=0.5, le=20.0, description="평균 침실 수")
-        Population: float = Field(..., ge=1.0, le=50000.0, description="구역 인구")
-        AveOccup: float = Field(..., ge=0.5, le=30.0, description="평균 거주 인원")
-        Latitude: float = Field(..., ge=32.0, le=42.0, description="위도 (32 ~ 42)")
-        Longitude: float = Field(..., ge=-125.0, le=-114.0, description="경도 (-125 ~ -114)")
-
-        @model_validator(mode="after")
-        def validate_rooms_and_population(self):
-            if self.AveBedrms > self.AveRooms:
-                raise ValueError(f"평균 침실 수({self.AveBedrms})가 평균 방 수({self.AveRooms})보다 클 수 없습니다.")
-            if self.Population < self.AveOccup:
-                raise ValueError(f"구역 총 인구({self.Population})가 평균 거주 인원({self.AveOccup})보다 작을 수 없습니다.")
-            return self
-
-
-[개선 제안 코드 2] 루브릭 4번 '전체 서빙 아키텍처 실행 플로우 다이어그램' 보완
-Day5.md 회고 섹션에 아래 Mermaid 시퀀스 다이어그램을 추가하면 전체 서비스의 호출 흐름과
-비동기 처리 구조를 한눈에 파악할 수 있습니다.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as 사용자 (브라우저)
-    participant Streamlit as Streamlit UI (:8501)
-    participant FastAPI as FastAPI Backend (:8000)
-    participant Schema as Pydantic Schema Validator
-    participant ThreadPool as ThreadPoolExecutor
-    participant Model as HousingPredictor (PyTorch)
-
-    User->>Streamlit: 8개 주택 피처 입력 후 '가격 예측' 클릭
-    Streamlit->>FastAPI: POST /predict (JSON Body)
-    FastAPI->>Schema: HousingRequest 스키마 및 범위 검증
-    alt 유효성 검사 실패 (예: 위도 50 입력)
-        Schema-->>FastAPI: RequestValidationError
-        FastAPI-->>Streamlit: HTTP 422 Unprocessable Entity
-        Streamlit-->>User: 입력값 오류 알림 표시
-    else 유효성 검사 성공
-        Schema-->>FastAPI: 검증 완료된 Request 객체
-        FastAPI->>ThreadPool: loop.run_in_executor(predictor.predict, features)
-        ThreadPool->>Model: (X - mean) / std 정규화 & PyTorch 순전파 추론
-        Model-->>ThreadPool: 예측 가격 ($100k 및 USD 환산)
-        ThreadPool-->>FastAPI: 추론 결과 Future 반환
-        FastAPI-->>Streamlit: JSON 응답 {"predicted_price": 1.86, "predicted_price_usd": 186049}
-        Streamlit-->>User: 실시간 예상 주택 가격 및 메트릭 화면 렌더링
-    end
-```
+@model_validator(mode="after")
+def validate_cross_fields(self):
+    if self.AveBedrms > self.AveRooms:
+        raise ValueError("침실 수가 전체 방 수보다 클 수 없습니다.")
+    return self
 ```
