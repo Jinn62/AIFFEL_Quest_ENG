@@ -1,5 +1,5 @@
 # AIFFEL Campus Online Code Peer Review Templete
-- 코더 : 최진현 (Jinn62)
+- 코더 : 채진현 (Jinn62)
 - 리뷰어 : 천세문
 
 
